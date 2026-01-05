@@ -3,7 +3,17 @@
 from enum import Enum
 from typing import Optional
 import click
+import logging
+
 from src.config import Config
+from src.scraper import calculate_date_range
+from src.aggregator import scrape_all_sources, deduplicate_content, aggregate_posts
+from src.script_generator import generate_script, estimate_speaking_duration
+from src.tts import text_to_speech, estimate_audio_cost
+from src.file_handler import save_audio
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 class TimePeriod(Enum):
@@ -115,25 +125,60 @@ def main() -> None:
 
     click.echo("\n🚀 Starting podcast generation...\n")
 
-    # TODO: Implement actual workflow
-    # For now, show mock progress
-    steps = [
-        "Scraping VC blogs",
-        "Aggregating content",
-        "Generating script",
-        "Creating audio",
-        "Saving file",
-    ]
+    try:
+        # Step 1: Scrape VC blogs
+        click.echo("📡 Step 1/5: Scraping VC blogs...")
+        start_date, end_date = calculate_date_range(time_period.value // 7)
+        all_posts = scrape_all_sources(start_date, end_date)
+        click.echo(f"   ✓ Collected {len(all_posts)} posts from VC sources")
 
-    for i, step in enumerate(steps, 1):
-        display_progress(step, i, len(steps))
-        import time
-        time.sleep(0.5)  # Mock delay
+        # Step 2: Deduplicate content
+        click.echo("\n🔍 Step 2/5: Deduplicating content...")
+        unique_posts = deduplicate_content(all_posts)
+        click.echo(f"   ✓ Deduplicated to {len(unique_posts)} unique posts")
 
-    # Mock success message
-    click.echo("\n✅ Success! Podcast would be saved to:")
-    click.echo(f"   {Config.get_desktop_path()}/vc_podcast_[timestamp].mp3")
-    click.echo("\n📝 Note: Full implementation in progress.")
+        if len(unique_posts) < 3:
+            click.echo(
+                f"\n❌ Error: Insufficient content ({len(unique_posts)} posts). "
+                "Try a longer timeframe or different topic.",
+                err=True,
+            )
+            return
+
+        # Step 3: Generate script
+        click.echo("\n✍️  Step 3/5: Generating podcast script...")
+        markdown_content = aggregate_posts(unique_posts)
+        script = generate_script(markdown_content, topic, time_period.value)
+        duration = estimate_speaking_duration(script)
+        click.echo(f"   ✓ Script generated ({len(script.split())} words, ~{duration:.1f} min)")
+
+        # Step 4: Convert to audio
+        click.echo("\n🎙️  Step 4/5: Converting text to speech...")
+        cost = estimate_audio_cost(script)
+        click.echo(f"   💰 Estimated cost: ${cost:.2f}")
+        audio_data = text_to_speech(script)
+        click.echo(f"   ✓ Audio generated ({len(audio_data) / 1024 / 1024:.2f} MB)")
+
+        # Step 5: Save file
+        click.echo("\n💾 Step 5/5: Saving podcast file...")
+        metadata = {"topic": topic, "timeframe_days": time_period.value}
+        filepath = save_audio(audio_data, metadata)
+
+        # Success summary
+        click.echo("\n" + "=" * 60)
+        click.echo("✅ Podcast generated successfully!")
+        click.echo("=" * 60)
+        click.echo(f"📁 File: {filepath}")
+        click.echo(f"⏱️  Duration: ~{duration:.1f} minutes")
+        click.echo(f"📊 Sources: {len(unique_posts)} unique posts")
+        click.echo(f"💰 Cost: ${cost:.2f}")
+        click.echo("\n🎧 Your podcast is ready to listen!")
+
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+        import traceback
+        if click.confirm("\n🐛 Show detailed error trace?", default=False):
+            click.echo("\n" + traceback.format_exc(), err=True)
 
 
 if __name__ == "__main__":
