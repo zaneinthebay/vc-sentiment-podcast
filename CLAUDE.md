@@ -1,35 +1,22 @@
 # Claude Code Configuration - VC Sentiment Podcast
 
 ## Project Context
-This project analyzes venture capital sentiment from podcast transcripts.
-
-## Custom Agents
-
-### Product Idea to Requirement Writer
-**Location:** `.claude/agents/product-idea-to-requirement-writer.md`
-**Purpose:** Transforms brainstorm ideas into comprehensive, executable PRDs (Product Requirements Documents)
-
-**When to use:**
-- Converting product ideas into structured specifications
-- Creating test-driven requirement documents
-- Defining implementation sequences for new features
-
-**Key Features:**
-- Test-first, spec-driven approach
-- Git workflow integration
-- Atomic, independently testable units
-- Self-correction loops for agents
-
-**Example Usage:**
-```
-Use the product-idea-to-requirement-writer agent to create a PRD for [your idea]
-```
+This project generates automated podcasts analyzing venture capital sentiment from blog posts.
 
 ## Project-Specific Instructions
 - Follow test-first development principles
 - Commit frequently with clear, conventional commit messages
 - Use semantic versioning for releases
+- All unit tests must pass before committing
+- Maintain 100% test coverage for core functionality
+
+## API Configuration
+This project requires:
+- Anthropic Claude API (script generation)
+- ElevenLabs API (text-to-speech)
+- API keys should be configured in `.env` file
 
 ## Notes
 - Project initialized: 2026-01-04
-- Custom agents are version-controlled in `.claude/agents/`
+- Built with test-first, spec-driven methodology
+- 97 unit tests covering all modules
